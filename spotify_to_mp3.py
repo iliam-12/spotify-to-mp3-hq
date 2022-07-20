@@ -25,15 +25,17 @@ def write_tracks(text_file: str, tracks: dict, playlist_name: str):
                     track = item
                 try:
                     track_url = track['external_urls']['spotify']
-                    track_name = track['name']
-                    track_artist = track['artists'][0]['name']
+                    track_name = track['name'].replace(',', ' &')
+                    track_artist = track['artists'][0]['name'].replace(',', ' &')
                     csv_line = track_name + "," + track_artist + "," + playlist_name + "," + track_url + "\n"
                     try:
                         file_out.write(csv_line)
-                    except UnicodeEncodeError:  # Most likely caused by non-English song names
-                        print("Track named {} failed due to an encoding error. This is \
-                            most likely due to this song having a non-English name.".format(track_name))
+                    except Exception as e:
+                        print(e)  # Most likely caused by non-English song names
+                        # print("Track named {} failed due to an encoding error. This is \
+                        #     most likely due to this song having a non-English name.".format(track_name))
                 except KeyError:
+                    print("-->" + csv_line)
                     print(u'Skipping track {0} by {1} (local only?)'.format(
                             track['name'], track['artists'][0]['name']))
             # 1 page = 50 results, check if there are more pages
@@ -55,7 +57,7 @@ def find_and_download_songs(reference_file: str):
     if not os.path.exists('tracks_downloaded.csv'):
         with open("tracks_downloaded.csv", 'a', encoding='utf-8') as f:
             csv.writer(f).writerow(['Title','Artist','Playlist','Url'])
-    df = pd.read_csv('tracks_downloaded.csv')
+    df = pd.read_csv('tracks_downloaded.csv', error_bad_lines=False)
 
     TOTAL_ATTEMPTS = 10
     with open(reference_file, "r", encoding='utf-8') as file:
@@ -197,11 +199,11 @@ def enable_multicore(autoenable=False, maxcores=None, buffercores=1):
 def load_playlists():
     return (
         [
-            config['PLAYLIST']['PURE_TRIP'],
-            config['PLAYLIST']['HOUSE'],
-            config['PLAYLIST']['BIG_ROOM'],
-            config['PLAYLIST']['UNKNOWN_TECH'],
-            config['PLAYLIST']['MY_FAVORITE'],
+            # config['PLAYLIST']['PURE_TRIP'],
+            # config['PLAYLIST']['HOUSE'],
+            # config['PLAYLIST']['BIG_ROOM'],
+            # config['PLAYLIST']['UNKNOWN_TECH'],
+            # config['PLAYLIST']['MY_FAVORITE'],
             config['PLAYLIST']['TECH_HOUSE'],
             config['PLAYLIST']['PROG_TECH'],
             config['PLAYLIST']['BUSHER_GUILLANO'],
