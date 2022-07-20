@@ -1,17 +1,9 @@
-# Downloads a Spotify playlist into a folder of MP3 tracks
-# Jason Chen, 21 June 2020
-
-import os
-import spotipy
+import os, glob, re, csv, json, configparser, multiprocessing
+import spotipy, yt_dlp
 import spotipy.oauth2 as oauth2
-import yt_dlp
 from youtube_search import YoutubeSearch
-import multiprocessing
-import configparser
 import pandas as pd
-import csv
-
-# **************PLEASE READ THE README.md FOR USE INSTRUCTIONS**************
+from mutagen.easyid3 import EasyID3
 
 def write_tracks(text_file: str, tracks: dict, playlist_name: str):
     # Writes the information of all tracks in the playlist to a text file. 
@@ -19,6 +11,8 @@ def write_tracks(text_file: str, tracks: dict, playlist_name: str):
     with open(text_file, 'w+', encoding='utf-8') as file_out:
         while True:
             for item in tracks['items']:
+                # with open('json_data.json', 'w') as outfile:f
+                #     json.dump(tracks['items'], outfile,indent=4)
                 if 'track' in item:
                     track = item['track']
                 else:
@@ -35,7 +29,6 @@ def write_tracks(text_file: str, tracks: dict, playlist_name: str):
                         # print("Track named {} failed due to an encoding error. This is \
                         #     most likely due to this song having a non-English name.".format(track_name))
                 except KeyError:
-                    print("-->" + csv_line)
                     print(u'Skipping track {0} by {1} (local only?)'.format(
                             track['name'], track['artists'][0]['name']))
             # 1 page = 50 results, check if there are more pages
@@ -199,77 +192,92 @@ def enable_multicore(autoenable=False, maxcores=None, buffercores=1):
 def load_playlists():
     return (
         [
-            config['PLAYLIST']['TUPAC'],
-            config['PLAYLIST']['ABOVE_BEYOND'],
-            config['PLAYLIST']['ADRIATIQUE'],
-            config['PLAYLIST']['AKON'],
-            config['PLAYLIST']['ALY_FILA'],
-            config['PLAYLIST']['ANDREW_RAYEL'],
-            config['PLAYLIST']['ARMIN_VAN_BUUREN'],
-            config['PLAYLIST']['ATYPIC_PLAYLIST'],
-            config['PLAYLIST']['BENNY_BENASSI'],
-            config['PLAYLIST']['BICEP'],
-            config['PLAYLIST']['BUSHER_GUILLANO'],
-            config['PLAYLIST']['CAMELPHAT'],
-            config['PLAYLIST']['CAR_MUSIC'],
-            config['PLAYLIST']['COSMIC_GATE'],
-            config['PLAYLIST']['DASH_BERLIN'],
-            config['PLAYLIST']['DAVID_GUETTO'],
-            config['PLAYLIST']['DEADMAU5'],
-            config['PLAYLIST']['DEPECHE_MODE'],
-            config['PLAYLIST']['DUBVISION'],
-            config['PLAYLIST']['BIG_ROOM'],
-            config['PLAYLIST']['EVANESCENCE'],
-            config['PLAYLIST']['FERRY_CORSTEN'],
-            config['PLAYLIST']['FESTIVAL'],
-            config['PLAYLIST']['FISHER'],
-            config['PLAYLIST']['GIUSEPPE_OTTIVIANI'],
-            config['PLAYLIST']['HARD_TRANCE'],
-            config['PLAYLIST']['HARDWELL'],
-            config['PLAYLIST']['HOUSE'],            
-            config['PLAYLIST']['IAM'],
-            config['PLAYLIST']['JOEYSUKI'],
-            config['PLAYLIST']['KEY4050'],
-            config['PLAYLIST']['LINKIN_PARK'],
-            config['PLAYLIST']['LYRICS_TRANCE'],
-            config['PLAYLIST']['PUSH'],
-            config['PLAYLIST']['MOOD'],
-            config['PLAYLIST']['MY_FAVORITE'],
-            config['PLAYLIST']['NORA_EN_PURE'],
-            config['PLAYLIST']['ORJAN_NILSEN'],
-            config['PLAYLIST']['PARTY_1'],
-            config['PLAYLIST']['PARTY_2'],
-            config['PLAYLIST']['PARTY_3'],
-            config['PLAYLIST']['PARTY_4'],
-            config['PLAYLIST']['PARTY_5'],
-            config['PLAYLIST']['PARTY_6'],
-            config['PLAYLIST']['PARTY_7'],
-            config['PLAYLIST']['PARTY_8'],
-            config['PLAYLIST']['PIANO'],
-            config['PLAYLIST']['PROG_HOUSE'],
-            config['PLAYLIST']['PROG_TECH'],
-            config['PLAYLIST']['PSYTRANCE'],
-            config['PLAYLIST']['CLASSIC_TECH_ACID'],
-            config['PLAYLIST']['PURE_TRIP'],
-            config['PLAYLIST']['ROBBIE_WILLIAMS'],
-            config['PLAYLIST']['SECRET_SET'],
-            config['PLAYLIST']['SKI'],
-            config['PLAYLIST']['SOIREE_2020'],
-            config['PLAYLIST']['SOLARSTONE'],
-            config['PLAYLIST']['SOME_THINGS'],
-            config['PLAYLIST']['SULTAN_SHEPARD'],
-            config['PLAYLIST']['SUPER8_TAB'],
-            config['PLAYLIST']['TECH_HOUSE'],
-            config['PLAYLIST']['THE_THRILLSEEKERS'],
-            config['PLAYLIST']['OLD_TIESTO'],
-            config['PLAYLIST']['TINLICKER'],
-            config['PLAYLIST']['TUBE_AMBIANCE'],
-            config['PLAYLIST']['UNKNOWN_TECH'],
-            config['PLAYLIST']['UPLIFTING'],
-            config['PLAYLIST']['VARIETE_FR'],
-            config['PLAYLIST']['VICETONE'],
+            config['PLAYLIST']['MERVIN'],
+            # config['PLAYLIST']['ABOVE_BEYOND'],
+            # config['PLAYLIST']['ADRIATIQUE'],
+            # config['PLAYLIST']['AKON'],
+            # config['PLAYLIST']['ALY_FILA'],
+            # config['PLAYLIST']['ANDREW_RAYEL'],
+            # config['PLAYLIST']['ARMIN_VAN_BUUREN'],
+            # config['PLAYLIST']['ATYPIC_PLAYLIST'],
+            # config['PLAYLIST']['BENNY_BENASSI'],
+            # config['PLAYLIST']['BICEP'],
+            # config['PLAYLIST']['BUSHER_GUILLANO'],
+            # config['PLAYLIST']['CAMELPHAT'],
+            # config['PLAYLIST']['CAR_MUSIC'],
+            # config['PLAYLIST']['COSMIC_GATE'],
+            # config['PLAYLIST']['DASH_BERLIN'],
+            # config['PLAYLIST']['DAVID_GUETTO'],
+            # config['PLAYLIST']['DEADMAU5'],
+            # config['PLAYLIST']['DEPECHE_MODE'],
+            # config['PLAYLIST']['DUBVISION'],
+            # config['PLAYLIST']['BIG_ROOM'],
+            # config['PLAYLIST']['EVANESCENCE'],
+            # config['PLAYLIST']['FERRY_CORSTEN'],
+            # config['PLAYLIST']['FESTIVAL'],
+            # config['PLAYLIST']['FISHER'],
+            # config['PLAYLIST']['GIUSEPPE_OTTIVIANI'],
+            # config['PLAYLIST']['HARD_TRANCE'],
+            # config['PLAYLIST']['HARDWELL'],
+            # config['PLAYLIST']['HOUSE'],            
+            # config['PLAYLIST']['IAM'],
+            # config['PLAYLIST']['JOEYSUKI'],
+            # config['PLAYLIST']['KEY4050'],
+            # config['PLAYLIST']['LINKIN_PARK'],
+            # config['PLAYLIST']['LYRICS_TRANCE'],
+            # config['PLAYLIST']['PUSH'],
+            # config['PLAYLIST']['MOOD'],
+            # config['PLAYLIST']['MY_FAVORITE'],
+            # config['PLAYLIST']['NORA_EN_PURE'],
+            # config['PLAYLIST']['ORJAN_NILSEN'],
+            # config['PLAYLIST']['PARTY_1'],
+            # config['PLAYLIST']['PARTY_2'],
+            # config['PLAYLIST']['PARTY_3'],
+            # config['PLAYLIST']['PARTY_4'],
+            # config['PLAYLIST']['PARTY_5'],
+            # config['PLAYLIST']['PARTY_6'],
+            # config['PLAYLIST']['PARTY_7'],
+            # config['PLAYLIST']['PARTY_8'],
+            # config['PLAYLIST']['PIANO'],
+            # config['PLAYLIST']['PROG_HOUSE'],
+            # config['PLAYLIST']['PROG_TECH'],
+            # config['PLAYLIST']['PSYTRANCE'],
+            # config['PLAYLIST']['CLASSIC_TECH_ACID'],
+            # config['PLAYLIST']['PURE_TRIP'],
+            # config['PLAYLIST']['ROBBIE_WILLIAMS'],
+            # config['PLAYLIST']['SECRET_SET'],
+            # config['PLAYLIST']['SKI'],
+            # config['PLAYLIST']['SOIREE_2020'],
+            # config['PLAYLIST']['SOLARSTONE'],
+            # config['PLAYLIST']['SOME_THINGS'],
+            # config['PLAYLIST']['SULTAN_SHEPARD'],
+            # config['PLAYLIST']['SUPER8_TAB'],
+            # config['PLAYLIST']['TECH_HOUSE'],
+            # config['PLAYLIST']['THE_THRILLSEEKERS'],
+            # config['PLAYLIST']['OLD_TIESTO'],
+            # config['PLAYLIST']['TINLICKER'],
+            # config['PLAYLIST']['TUBE_AMBIANCE'],
+            # config['PLAYLIST']['UNKNOWN_TECH'],
+            # config['PLAYLIST']['UPLIFTING'],
+            # config['PLAYLIST']['VARIETE_FR'],
+            # config['PLAYLIST']['VICETONE'],
         ]
     )
+
+def id3_mutagen():
+    for music in glob.glob("*/*.mp3"):
+        tags = EasyID3(music)
+        music = re.sub(r" \[.*\]", "", music).split("/",1)[1]
+        if len(music.split("-")) == 2:
+            if music.split("-")[1].split('.mp3', 1)[0][0] == ' ':
+                tags['title'] = music.split("-")[1].split('.mp3', 1)[0][1:]
+            else:
+                tags['title'] = music.split("-")[1].split('.mp3', 1)[0]
+            tags['artist'] = music.split("-")[0]
+        else:
+            tags['title'] = music.split(".mp3", 1)[0]
+        tags.save()
+    print("Mutagen complete.")
 
 if __name__ == "__main__":
     # Parameters
@@ -299,4 +307,5 @@ if __name__ == "__main__":
         else:
             find_and_download_songs(reference_file)
         os.chdir("..")
+    id3_mutagen()
     print("Operation complete.")
