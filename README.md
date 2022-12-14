@@ -1,8 +1,8 @@
 # Spotify to MP3 - Python
-# ----------------------------------------------------------------
+# ------------------------------------------------------
 /!\ I re-use the code of https://github.com/JayChen35/spotify-to-mp3-python.git to my own use.
 As I am a DJ mixer, I need to have all my last sounds in high quality. I implement a way to download all sounds of all playlists I have in one execution script and add id3 specifications.
-# ----------------------------------------------------------------
+# ------------------------------------------------------
 The simplest way to convert/download your Spotify playlists into MP3 files, using Python3.
 
 ## How To Use
